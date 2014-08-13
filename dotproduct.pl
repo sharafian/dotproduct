@@ -4,7 +4,6 @@ use warnings;
 
 use YAML::XS;
 use File::Slurp;
-use File::Copy;
 
 sub usage {
 	print "usage: dotproduct.pl <config.yml>\n";
@@ -24,7 +23,17 @@ sub YAMLfromFile {
 		or die "could not parse file as YAML";
 	return $yaml;
 }
+sub subdir {
+	my ($dir, $sdir) = @_;
 
+	if ($dir =~ /^(.+?)\/*$/) {
+		return $1 . '/' . $sdir;
+	}
+	return;
+}
+sub superdir {
+	return subdir($_[0], "..");
+}
 sub processEntry {
 	my ($file, $dref, $vref) = @_;
 
@@ -34,15 +43,11 @@ sub processEntry {
 		or die "could not find destination for $file";	
 	my $delim = $dref->{delimeter};
 
-	processFile($src, $dest, $vref, $delim);
-}
-sub subdir {
-	my ($dir, $sdir) = @_;
-
-	if ($dir =~ /(.+?)\/*/) {
-		return $1 . $sdir;
+	if (-f $src) {
+		processFile($src, $dest, $vref, $delim);
+	} elsif (-d $src) {
+		processFile($src, $dest, $vref, $delim);
 	}
-	return;
 }
 sub processFile {
 	my ($src, $dest, $vref, $delim) = @_;
@@ -50,9 +55,12 @@ sub processFile {
 	if (-d $src) {
 		opendir DIR, $src;
 		while (readdir DIR) {
-			processFile($_, subdir($dest, $src), $vref, $delim);
+			if ($_ ne '.' && $_ ne '..') {
+				processFile(subdir($src,$_), subdir($dest, $_), $vref, $delim);
+			}
 		}
 		closedir DIR;
+		return;
 	}
 
 	my $text = read_file($src);
@@ -63,9 +71,24 @@ sub processFile {
 
 sub replacePatterns {
 	my ($text, $vref, $delim) = @_;
+
+	my $newtext = '';
+	my $isvar = 0;
+	foreach my $part (split /$delim/, $text) {
+
+		if ($isvar && defined $vref->{$part}) {
+			$newtext .= $vref->{$part};
+		} else {
+			$newtext .= $part;
+		}
+		$isvar = not $isvar;	
+	}
+	return $newtext;
 }
 sub copyToFile {
 	my ($text, $dest) = @_;
+
+	print "$dest\n";
 
 	open FILE, '>', $dest
 		or die "could not open $dest";
@@ -73,7 +96,7 @@ sub copyToFile {
 	close FILE;
 }
 sub runCommand {
-	system $_[0];
+#	system $_[0];
 }
 
 my $configfile = getArgs();
