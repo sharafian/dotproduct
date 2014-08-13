@@ -5,24 +5,11 @@ use warnings;
 use YAML::XS;
 use File::Slurp;
 
-sub usage {
-	print "usage: dotproduct.pl <config.yml>\n";
-}
-sub getArgs {
-	if (defined $ARGV[0]) {
-		return $ARGV[0];
-	} else {
-		usage();
-		exit;
-	}	
+sub in {
+	my ($v, @a) = @_;
+	return (grep {$_ eq $v} @a);
 }
 
-sub YAMLfromFile {
-	my $file = shift;
-	my $yaml = YAML::XS::LoadFile($file)
-		or die "could not parse file as YAML";
-	return $yaml;
-}
 sub subdir {
 	my ($dir, $sdir) = @_;
 
@@ -34,6 +21,34 @@ sub subdir {
 sub superdir {
 	return subdir($_[0], "..");
 }
+
+sub usage {
+	print "usage: dotproduct.pl <config.yml>\n";
+}
+sub getArgs {
+	if (defined $ARGV[0]) {
+		return $ARGV[0];
+	} else {
+		usage();
+		exit;
+	}	
+}
+sub withinTarget {
+	my ($dref, $target) = @_;
+
+	if (defined $dref->{target}) {
+		return ($dref->{target} eq $target);
+	}
+	return 1;
+}
+
+sub YAMLfromFile {
+	my $file = shift;
+	my $yaml = YAML::XS::LoadFile($file)
+		or die "could not parse file as YAML";
+	return $yaml;
+}
+
 sub processEntry {
 	my ($file, $dref, $vref) = @_;
 
@@ -65,8 +80,6 @@ sub processFile {
 
 	my $text = read_file($src);
 	$text = replacePatterns($text, $vref, $delim) if defined $delim;
-
-	copyToFile($text, $dest);
 }
 
 sub replacePatterns {
@@ -96,17 +109,27 @@ sub copyToFile {
 	close FILE;
 }
 sub runCommand {
-#	system $_[0];
+	my ($script, $dref) = @_;
+	
+	my $command = $dref->{command}
+		or die "could not find command for $script";
+	system $command;
+	print "$script";
 }
 
+my $target = "default";
 my $configfile = getArgs();
 my $data = YAMLfromFile($configfile);
 
 foreach my $file (keys %{$data->{files}}) {
-	processEntry($file, $data->{files}->{$file}, $data->{variables});	
+	if (withinTarget($data->{files}->{$file})) {
+		processEntry($file, $data->{files}->{$file}, $data->{variables})
+	}
 }
-foreach my $command ($data->{commands}) {
-	runCommand($command);	
+foreach my $script (keys %{$data->{scripts}}) {
+	if (withinTarget($data->{scripts}->{$script})) {
+		runCommand($script, $data->{scripts}->{$script});	
+	}
 }
 
 print "Complete!\n"
