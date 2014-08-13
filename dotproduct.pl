@@ -1,43 +1,71 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 use strict;
 use warnings;
 
 use YAML::XS;
-use File::slurp;
+use File::Slurp;
 use File::Copy;
+
+sub usage {
+	print "usage: dotproduct.pl <config.yml>\n";
+}
+sub getArgs {
+	if (defined $ARGV[0]) {
+		return $ARGV[0];
+	} else {
+		usage();
+		exit;
+	}	
+}
 
 sub YAMLfromFile {
 	my $file = shift;
-	return Load( read_file($file)
-		or die "could not open file")
+	my $yaml = YAML::XS::LoadFile($file)
 		or die "could not parse file as YAML";
+	return $yaml;
 }
 
-sub processFile {
-	my $file = shift;
-	my $dref = shift;
-	my $vref = shift;
+sub processEntry {
+	my ($file, $dref, $vref) = @_;
 
-	my $text = read_file($file);
-
-	my $delim = $dref->{delimeter} or $dref->{delim};
-	if (defined $delim) {
-		$text = replacePatterns($text, $vref, $delim);
-	}	
-
-	my $dest = $dref->{destination} or $dref->{dest}
+	my $src = $dref->{source}
+		or die "could not find source for $file";
+	my $dest = $dref->{destination}
 		or die "could not find destination for $file";	
+	my $delim = $dref->{delimeter};
+
+	processFile($src, $dest, $vref, $delim);
+}
+sub subdir {
+	my ($dir, $sdir) = @_;
+
+	if ($dir =~ /(.+?)\/*/) {
+		return $1 . $sdir;
+	}
+	return;
+}
+sub processFile {
+	my ($src, $dest, $vref, $delim) = @_;
+
+	if (-d $src) {
+		opendir DIR, $src;
+		while (readdir DIR) {
+			processFile($_, subdir($dest, $src), $vref, $delim);
+		}
+		closedir DIR;
+	}
+
+	my $text = read_file($src);
+	$text = replacePatterns($text, $vref, $delim) if defined $delim;
+
 	copyToFile($text, $dest);
 }
 
 sub replacePatterns {
-	my $text  = shift;
-	my $vref  = shift;
-	my $delim = shift;
+	my ($text, $vref, $delim) = @_;
 }
 sub copyToFile {
-	my $text = shift;
-	my $dest = shift;
+	my ($text, $dest) = @_;
 
 	open FILE, '>', $dest
 		or die "could not open $dest";
@@ -48,10 +76,11 @@ sub runCommand {
 	system $_[0];
 }
 
+my $configfile = getArgs();
 my $data = YAMLfromFile($configfile);
 
-foreach my $file (keys $data->{files}) {
-	processFile($file, $data->{files}->{$file}, $data->{variables});	
+foreach my $file (keys %{$data->{files}}) {
+	processEntry($file, $data->{files}->{$file}, $data->{variables});	
 }
 foreach my $command ($data->{commands}) {
 	runCommand($command);	
