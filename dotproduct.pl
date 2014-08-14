@@ -36,7 +36,7 @@ sub getArgs {
 sub withinTarget {
 	my ($dref, $target) = @_;
 
-	if (defined $dref->{target}) {
+	if (exists $dref->{target}) {
 		return ($dref->{target} eq $target);
 	}
 	return 1;
@@ -56,7 +56,7 @@ sub processEntry {
 		or die "could not find source for $file";
 	my $dest = $dref->{destination}
 		or die "could not find destination for $file";	
-	my $delim = $dref->{delimeter};
+	my $delim = $dref->{delimeter} if exists $dref->{delimeter};
 
 	if (-f $src) {
 		processFile($src, $dest, $vref, $delim);
@@ -66,6 +66,7 @@ sub processEntry {
 }
 sub processFile {
 	my ($src, $dest, $vref, $delim) = @_;
+
 
 	if (-d $src) {
 		opendir DIR, $src;
@@ -80,6 +81,8 @@ sub processFile {
 
 	my $text = read_file($src);
 	$text = replacePatterns($text, $vref, $delim) if defined $delim;
+
+	copyToFile($text, $dest);
 }
 
 sub replacePatterns {
@@ -101,7 +104,7 @@ sub replacePatterns {
 sub copyToFile {
 	my ($text, $dest) = @_;
 
-	print "$dest\n";
+	print "copying $dest\n";
 
 	open FILE, '>', $dest
 		or die "could not open $dest";
@@ -113,8 +116,8 @@ sub runCommand {
 	
 	my $command = $dref->{command}
 		or die "could not find command for $script";
+	print "running $script\n";
 	system $command;
-	print "$script";
 }
 
 my $target = "default";
@@ -127,7 +130,7 @@ foreach my $file (keys %{$data->{files}}) {
 	}
 }
 foreach my $script (keys %{$data->{scripts}}) {
-	if (withinTarget($data->{scripts}->{$script})) {
+	if (withinTarget($data->{scripts}->{$script}, $target)) {
 		runCommand($script, $data->{scripts}->{$script});	
 	}
 }
