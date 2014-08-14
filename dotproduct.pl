@@ -23,20 +23,28 @@ sub superdir {
 }
 
 sub usage {
-	print "usage: dotproduct.pl <config.yml>\n";
+	print "usage: dotproduct.pl <config.yml> <target (optional)>\n";
 }
 sub getArgs {
+	my @args = ();
 	if (defined $ARGV[0]) {
-		return $ARGV[0];
+		push @args, $ARGV[0];
 	} else {
 		usage();
 		exit;
-	}	
+	}
+	if (defined $ARGV[1]) {
+		push @args, $ARGV[1];
+	} else {
+		push @args, "";
+	}
+	return @args;
 }
 sub withinTarget {
 	my ($dref, $target) = @_;
 
 	if (exists $dref->{target}) {
+		print "beep boop";
 		return ($dref->{target} eq $target);
 	}
 	return 1;
