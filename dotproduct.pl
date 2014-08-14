@@ -44,7 +44,6 @@ sub withinTarget {
 	my ($dref, $target) = @_;
 
 	if (exists $dref->{target}) {
-		print "beep boop";
 		return ($dref->{target} eq $target);
 	}
 	return 1;
@@ -128,8 +127,7 @@ sub runCommand {
 	system $command;
 }
 
-my $target = "default";
-my $configfile = getArgs();
+my ($configfile, $target) = getArgs();
 my $data = YAMLfromFile($configfile);
 
 foreach my $file (keys %{$data->{files}}) {
