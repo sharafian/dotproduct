@@ -131,7 +131,7 @@ my ($configfile, $target) = getArgs();
 my $data = YAMLfromFile($configfile);
 
 foreach my $file (keys %{$data->{files}}) {
-	if (withinTarget($data->{files}->{$file})) {
+	if (withinTarget($data->{files}->{$file}, $target)) {
 		processEntry($file, $data->{files}->{$file}, $data->{variables})
 	}
 }
