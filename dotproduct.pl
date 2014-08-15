@@ -99,7 +99,7 @@ sub replacePatterns {
 	my $isvar = 0;
 	foreach my $part (split /$delim/, $text) {
 
-		if ($isvar && defined $vref->{$part}) {
+		if ($isvar && exists $vref->{$part}) {
 			$newtext .= $vref->{$part};
 		} else {
 			$newtext .= $part;
