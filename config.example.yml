@@ -1,0 +1,25 @@
+vars:  
+  
+  variable1: '100'
+  variable2: '42'
+
+files:
+
+  file1:
+    src: folder1/file
+    dest: '/home/ben/.file'
+    delim: '@'
+
+  scripts:
+    src: scripts/
+    dest: '/home/ben/.local/bin/'
+    delim: '@@'
+
+scripts:
+
+  chmod:
+    cmd: 'chmod +x /home/ben/.local/bin/*'
+
+  sometimes:
+    cmd: 'do_the_thing.sh'
+    target: sometimes
